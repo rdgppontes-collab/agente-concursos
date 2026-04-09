@@ -1,7 +1,8 @@
 import anthropic
 from config import MODELO_CLAUDE
 
-client = anthropic.Anthropic()
+import os
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 SYSTEM_AGENTE = """Você é um agente especialista em preparação para concursos públicos brasileiros.
 Sua missão é gerar conteúdo didático de alta qualidade, focado na aprovação.

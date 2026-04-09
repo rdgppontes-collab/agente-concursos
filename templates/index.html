@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agente de Concursos</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #fdf8f5; --card: #ffffff; --border: #f0997b; --border-light: #fde8dc;
+  --text: #4a1b0c; --muted: #993c1d; --accent: #d85a30; --accent-dark: #993c1d;
+  --accent-light: #faece7; --success: #1a7a4a; --success-light: #e6f4ec;
+  --danger: #a32d2d; --danger-light: #fcebeb; --radius: 12px; --radius-sm: 8px;
+}
+body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.header { background: var(--accent); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 16px; font-weight: 700; color: #fff; }
+.header .concurso-badge { font-size: 11px; background: rgba(255,255,255,.2); color: #fff; padding: 4px 12px; border-radius: 20px; font-weight: 500; }
+.nav { display: flex; background: #fff; border-bottom: 2px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.tab { padding: 11px 16px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--muted); white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+.tab:hover { color: var(--accent); }
+.tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.main { padding: 16px 20px 80px; max-width: 900px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.card-title-bar { width: 4px; height: 16px; background: var(--accent); border-radius: 2px; }
+.form-group { margin-bottom: 14px; }
+label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+input, select, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; color: var(--text); background: var(--bg); outline: none; transition: border .15s; font-family: inherit; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--card); }
+textarea { resize: vertical; min-height: 100px; }
+.btn { padding: 9px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-center { display: block; margin: 16px auto 0; }
+.btn-secondary { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--bg); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; text-align: center; }
+.stat-num { font-size: 24px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.resultado { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 16px; display: none; }
+.resultado.show { display: block; }
+.resultado h2 { font-size: 18px; font-weight: 700; margin: 20px 0 10px; }
+.resultado h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
+.resultado p { font-size: 14px; line-height: 1.7; margin-bottom: 10px; }
+.resultado ul, .resultado ol { padding-left: 20px; margin-bottom: 10px; }
+.resultado li { font-size: 14px; line-height: 1.7; margin-bottom: 4px; }
+.resultado table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+.resultado th { background: var(--accent-light); color: var(--accent-dark); padding: 8px 12px; text-align: left; border: 1px solid var(--border); font-weight: 600; }
+.resultado td { padding: 8px 12px; border: 1px solid var(--border-light); }
+.resultado strong { font-weight: 600; color: var(--accent-dark); }
+.resultado code { background: var(--accent-light); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--accent-dark); }
+.resultado blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); margin: 10px 0; border-radius: 0; }
+.loading { display: none; text-align: center; padding: 40px; color: var(--muted); }
+.loading.show { display: block; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border-light); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chat-box { height: 400px; overflow-y: auto; background: var(--bg); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-light); }
+.msg { max-width: 85%; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 14px; line-height: 1.6; }
+.msg.user { background: var(--accent); color: #fff; align-self: flex-end; }
+.msg.bot { background: var(--card); color: var(--text); align-self: flex-start; border: 1px solid var(--border-light); }
+.msg.bot p { margin-bottom: 6px; }
+.msg.bot p:last-child { margin-bottom: 0; }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row input { flex: 1; }
+.aula-item { background: var(--card); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: border .15s; }
+.aula-item:hover { border-color: var(--accent); }
+.aula-materia { font-size: 13px; font-weight: 600; }
+.aula-assunto { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.aula-data { font-size: 11px; color: var(--muted); }
+.badge-coral { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--border); }
+.alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+.alert.show { display: block; }
+.alert-error { background: var(--danger-light); color: var(--danger); }
+.questoes-actions { background: var(--accent-light); border-radius: var(--radius-sm); padding: 12px 16px; margin-top: 16px; display: none; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px solid var(--border); }
+.questoes-actions.show { display: flex; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Agente de Concursos</h1>
+  <span class="concurso-badge" id="badge-concurso">{{ banca }}</span>
+</div>
+
+<div class="nav">
+  <button class="tab active" onclick="mostrarPanel('inicio', this)">Início</button>
+  <button class="tab" onclick="mostrarPanel('aula', this)">Gerar Aula</button>
+  <button class="tab" onclick="mostrarPanel('questoes', this)">Questões</button>
+  <button class="tab" onclick="mostrarPanel('edital', this)">Edital</button>
+  <button class="tab" onclick="mostrarPanel('chat', this)">Chat</button>
+  <button class="tab" onclick="mostrarPanel('historico', this)">Histórico</button>
+</div>
+
+<div class="main">
+
+  <div class="panel active" id="panel-inicio">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="stat-aulas">0</div><div class="stat-label">Aulas geradas</div></div>
+      <div class="stat"><div class="stat-num" id="stat-questoes">0</div><div class="stat-label">Questões</div></div>
+      <div class="stat"><div class="stat-num" id="stat-acertos">0%</div><div class="stat-label">Aproveitamento</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Configuração rápida</div>
+      <div class="form-group"><label>Concurso</label><input type="text" id="config-concurso" value="{{ concurso }}"></div>
+      <div class="grid-2">
+        <div class="form-group"><label>Banca padrão</label><select id="config-banca">{% for b in bancas %}<option value="{{ b }}" {% if b == banca %}selected{% endif %}>{{ b }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Nível</label><select id="config-nivel">{% for n in niveis %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="salvarConfig()">Salvar configuração</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Acesso rápido</div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="mostrarPanelBtn('aula')">Nova aula</button>
+        <button class="btn btn-secondary" onclick="mostrarPanelBtn('questoes')">Praticar questões</button>
+        <button class="btn btn-secondary" onclick="mostrarPanelBtn('edital')">Analisar edital</button>
+        <button class="btn btn-secondary" onclick="mostrarPanelBtn('chat')">Chat livre</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-aula">
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Gerar aula completa</div>
+      <div class="grid-2">
+        <div class="form-group"><label>Matéria</label><select id="aula-materia">{% for m in materias %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Banca</label><select id="aula-banca">{% for b in bancas %}<option value="{{ b }}" {% if b == banca %}selected{% endif %}>{{ b }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="form-group"><label>Assunto específico</label><input type="text" id="aula-assunto" placeholder="Ex: Sistema Financeiro Nacional, PIX e Open Finance"></div>
+      <div class="grid-2">
+        <div class="form-group"><label>Nível</label><select id="aula-nivel">{% for n in niveis %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Referência do professor</label><input type="text" id="aula-referencia" placeholder="Ex: Professora Adriana Figueiredo"></div>
+      </div>
+      <div class="alert alert-error" id="aula-erro"></div>
+      <button class="btn btn-primary btn-center" onclick="gerarAula()">Gerar aula</button>
+    </div>
+    <div class="loading" id="aula-loading"><div class="spinner"></div><p>Preparando sua aula...</p></div>
+    <div class="resultado" id="aula-resultado">
+      <div class="btn-row" style="margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="copiarAula()">Copiar</button>
+        <button class="btn btn-secondary" onclick="baixarAula()">Baixar .md</button>
+      </div>
+      <div id="aula-conteudo"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-questoes">
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Simulador de questões</div>
+      <div class="grid-2">
+        <div class="form-group"><label>Matéria</label><select id="q-materia">{% for m in materias %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label>Banca</label><select id="q-banca">{% for b in bancas %}<option value="{{ b }}" {% if b == banca %}selected{% endif %}>{{ b }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label>Assunto</label><input type="text" id="q-assunto" placeholder="Ex: Produtos bancários"></div>
+        <div class="form-group"><label>Quantidade</label><select id="q-qtd"><option value="3">3 questões</option><option value="5">5 questões</option><option value="10">10 questões</option></select></div>
+      </div>
+      <div class="form-group"><label>Nível</label><select id="q-nivel">{% for n in niveis %}<option value="{{ n }}" {% if n == 'intermediário' %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+      <div class="alert alert-error" id="q-erro"></div>
+      <button class="btn btn-primary btn-center" onclick="gerarQuestoes()">Gerar questões</button>
+    </div>
+    <div class="loading" id="q-loading"><div class="spinner"></div><p>Gerando questões no estilo da banca...</p></div>
+    <div class="resultado" id="q-resultado">
+      <div id="q-conteudo"></div>
+      <div class="questoes-actions" id="q-actions">
+        <span style="font-size:13px;color:var(--muted);font-weight:600">Você acertou esta rodada?</span>
+        <button class="btn btn-success" onclick="registrarResposta(true)">Acertei</button>
+        <button class="btn btn-danger" onclick="registrarResposta(false)">Errei</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-edital">
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Analisar edital</div>
+      <div class="form-group"><label>Cole o texto do edital aqui</label><textarea id="edital-texto" rows="8" placeholder="Cole o conteúdo do edital..."></textarea></div>
+      <div class="alert alert-error" id="edital-erro"></div>
+      <button class="btn btn-primary btn-center" onclick="analisarEdital()">Analisar edital</button>
+    </div>
+    <div class="loading" id="edital-loading"><div class="spinner"></div><p>Analisando o edital...</p></div>
+    <div class="resultado" id="edital-resultado"><div id="edital-conteudo"></div></div>
+  </div>
+
+  <div class="panel" id="panel-chat">
+    <div class="card" style="padding:16px">
+      <div class="card-title"><div class="card-title-bar"></div>Chat com o agente</div>
+      <div class="chat-box" id="chat-box">
+        <div class="msg bot"><p>Olá! Sou seu agente de estudos para concursos. Pergunte sobre qualquer matéria, peça explicações ou estratégias de estudo.</p></div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Digite sua dúvida..." onkeypress="if(event.key==='Enter') enviarChat()">
+        <button class="btn btn-primary" onclick="enviarChat()">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-historico">
+    <div class="card">
+      <div class="card-title"><div class="card-title-bar"></div>Aulas salvas</div>
+      <div id="historico-lista"><p style="color:var(--muted);font-size:13px">Carregando...</p></div>
+    </div>
+    <div class="resultado" id="hist-resultado">
+      <button class="btn btn-secondary" onclick="fecharAula()" style="margin-bottom:16px">Voltar</button>
+      <div id="hist-conteudo"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let aulaAtualMd='', aulaAtualArquivo='', qMateria='';
+
+function mostrarPanel(nome, el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+nome).classList.add('active');
+  if(el) el.classList.add('active');
+  if(nome==='historico') carregarHistorico();
+  if(nome==='inicio') carregarProgresso();
+}
+function mostrarPanelBtn(nome) {
+  const map={inicio:0,aula:1,questoes:2,edital:3,chat:4,historico:5};
+  mostrarPanel(nome, document.querySelectorAll('.tab')[map[nome]]);
+}
+function salvarConfig() {
+  const banca=document.getElementById('config-banca').value;
+  document.getElementById('badge-concurso').textContent=banca;
+  document.querySelectorAll('select[id$="-banca"]').forEach(s=>s.value=banca);
+  alert('Configuração salva!');
+}
+async function carregarProgresso() {
+  const d=await(await fetch('/progresso')).json();
+  document.getElementById('stat-aulas').textContent=d.aulas?.length||0;
+  document.getElementById('stat-questoes').textContent=d.questoes_respondidas||0;
+  const pct=d.questoes_respondidas>0?Math.round((d.questoes_corretas/d.questoes_respondidas)*100):0;
+  document.getElementById('stat-acertos').textContent=pct+'%';
+}
+async function gerarAula() {
+  const materia=document.getElementById('aula-materia').value;
+  const assunto=document.getElementById('aula-assunto').value;
+  const banca=document.getElementById('aula-banca').value;
+  const nivel=document.getElementById('aula-nivel').value;
+  const referencia=document.getElementById('aula-referencia').value;
+  const concurso=document.getElementById('config-concurso').value;
+  if(!assunto.trim()){mostrarErro('aula-erro','Informe o assunto da aula');return;}
+  mostrarErro('aula-erro',''); mostrarLoading('aula-loading',true); esconderResultado('aula-resultado');
+  const d=await(await fetch('/gerar-aula',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({materia,assunto,banca,nivel,referencia,concurso})})).json();
+  mostrarLoading('aula-loading',false);
+  if(d.erro){mostrarErro('aula-erro',d.erro);return;}
+  aulaAtualMd=d.conteudo_md; aulaAtualArquivo=d.arquivo;
+  document.getElementById('aula-conteudo').innerHTML=d.conteudo;
+  mostrarResultado('aula-resultado');
+}
+function copiarAula(){navigator.clipboard.writeText(aulaAtualMd);alert('Aula copiada!');}
+function baixarAula(){const b=new Blob([aulaAtualMd],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=aulaAtualArquivo||'aula.md';a.click();}
+async function gerarQuestoes() {
+  const materia=document.getElementById('q-materia').value;
+  const assunto=document.getElementById('q-assunto').value;
+  const banca=document.getElementById('q-banca').value;
+  const quantidade=document.getElementById('q-qtd').value;
+  const nivel=document.getElementById('q-nivel').value;
+  if(!assunto.trim()){mostrarErro('q-erro','Informe o assunto das questões');return;}
+  qMateria=materia; mostrarErro('q-erro',''); mostrarLoading('q-loading',true); esconderResultado('q-resultado');
+  const d=await(await fetch('/gerar-questoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({materia,assunto,banca,quantidade,nivel})})).json();
+  mostrarLoading('q-loading',false);
+  if(d.erro){mostrarErro('q-erro',d.erro);return;}
+  document.getElementById('q-conteudo').innerHTML=d.conteudo;
+  document.getElementById('q-actions').classList.add('show');
+  mostrarResultado('q-resultado');
+}
+async function registrarResposta(acertou) {
+  await fetch('/registrar-resposta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({materia:qMateria,acertou})});
+  carregarProgresso();
+  alert(acertou?'Acerto registrado!':'Erro registrado. Continue praticando!');
+}
+async function analisarEdital() {
+  const texto=document.getElementById('edital-texto').value;
+  if(texto.length<100){mostrarErro('edital-erro','Cole o texto do edital (mínimo 100 caracteres)');return;}
+  mostrarErro('edital-erro',''); mostrarLoading('edital-loading',true); esconderResultado('edital-resultado');
+  const d=await(await fetch('/analisar-edital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto})})).json();
+  mostrarLoading('edital-loading',false);
+  if(d.erro){mostrarErro('edital-erro',d.erro);return;}
+  document.getElementById('edital-conteudo').innerHTML=d.conteudo;
+  mostrarResultado('edital-resultado');
+}
+async function enviarChat() {
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg) return;
+  const box=document.getElementById('chat-box');
+  box.innerHTML+=`<div class="msg user">${msg}</div>`;
+  input.value=''; box.scrollTop=box.scrollHeight;
+  const t=document.createElement('div');t.className='msg bot';t.textContent='...';box.appendChild(t);box.scrollTop=box.scrollHeight;
+  const d=await(await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:msg})})).json();
+  t.innerHTML=d.resposta||d.erro; box.scrollTop=box.scrollHeight;
+}
+async function carregarHistorico() {
+  const d=await(await fetch('/historico')).json();
+  const lista=document.getElementById('historico-lista');
+  if(!d.aulas||d.aulas.length===0){lista.innerHTML='<p style="color:var(--muted);font-size:13px">Nenhuma aula gerada ainda.</p>';return;}
+  lista.innerHTML=d.aulas.slice().reverse().map(a=>`
+    <div class="aula-item" onclick="verAula('${a.arquivo}')">
+      <div><div class="aula-materia">${a.materia}</div><div class="aula-assunto">${a.assunto||''}</div></div>
+      <div style="text-align:right"><span class="badge-coral">${a.banca}</span><div class="aula-data" style="margin-top:4px">${new Date(a.data).toLocaleDateString('pt-BR')}</div></div>
+    </div>`).join('');
+}
+async function verAula(arquivo) {
+  const d=await(await fetch('/aula/'+arquivo)).json();
+  document.getElementById('hist-conteudo').innerHTML=d.conteudo;
+  document.getElementById('historico-lista').style.display='none';
+  mostrarResultado('hist-resultado');
+}
+function fecharAula(){document.getElementById('historico-lista').style.display='block';esconderResultado('hist-resultado');}
+function mostrarLoading(id,show){document.getElementById(id).classList.toggle('show',show);}
+function mostrarResultado(id){document.getElementById(id).classList.add('show');}
+function esconderResultado(id){document.getElementById(id).classList.remove('show');}
+function mostrarErro(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.toggle('show',!!msg);}
+carregarProgresso();
+</script>
+</body>
+</html>
